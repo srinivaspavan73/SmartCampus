@@ -255,22 +255,102 @@ def delete_job(job_id):
         }), 500
 
 # ==================== INTERNSHIPS ====================
+# ==================== INTERNSHIPS CRUD (Teacher Access) ====================
+# ==================== INTERNSHIPS GET ====================
 @app.route('/api/internships', methods=['GET'])
 def get_internships():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        query = "SELECT * FROM internships WHERE is_active = TRUE ORDER BY posted_date DESC"
+
+        query = "SELECT * FROM internships ORDER BY posted_date DESC"
         cursor.execute(query)
         internships = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'data': internships
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@app.route('/api/internships', methods=['POST'])
+def add_internship():
+    try:
+        data = request.json
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = """
+            INSERT INTO internships 
+            (company_name, position, description, duration, stipend, location, last_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+        cursor.execute(query, (
+            data['company_name'],
+            data['position'],
+            data.get('description', ''),
+            data.get('duration', ''),
+            data.get('stipend', 0),
+            data.get('location', ''),
+            data.get('last_date', None)
+        ))
+        conn.commit()
+        internship_id = cursor.lastrowid
         
         cursor.close()
         conn.close()
         
         return jsonify({
             'success': True,
-            'data': internships
+            'message': 'Internship added successfully',
+            'internship_id': internship_id
+        }), 201
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@app.route('/api/internships/<int:internship_id>', methods=['PUT'])
+def update_internship(internship_id):
+    try:
+        data = request.json
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = """
+            UPDATE internships 
+            SET company_name = %s, position = %s, description = %s, 
+                duration = %s, stipend = %s, location = %s, last_date = %s
+            WHERE internship_id = %s
+        """
+        cursor.execute(query, (
+            data['company_name'],
+            data['position'],
+            data.get('description', ''),
+            data.get('duration', ''),
+            data.get('stipend', 0),
+            data.get('location', ''),
+            data.get('last_date', None),
+            internship_id
+        ))
+        conn.commit()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Internship updated successfully'
         })
         
     except Exception as e:
@@ -279,13 +359,62 @@ def get_internships():
             'message': str(e)
         }), 500
 
+@app.route('/api/internships/<int:internship_id>', methods=['DELETE'])
+def delete_internship(internship_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = "DELETE FROM internships WHERE internship_id = %s"
+        cursor.execute(query, (internship_id,))
+        conn.commit()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Internship deleted successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+# ==================== EXAMINATIONS DELETE ====================
+@app.route('/api/examinations/<int:exam_id>', methods=['DELETE'])
+def delete_examination(exam_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = "DELETE FROM examinations WHERE exam_id = %s"
+        cursor.execute(query, (exam_id,))
+        conn.commit()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Examination deleted successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 # ==================== EXAMINATIONS ====================
+# @app.route('/api/examinations', methods=['GET'])
 @app.route('/api/examinations', methods=['GET'])
 def get_examinations():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         query = """
             SELECT e.*, d.dept_name, d.dept_code
             FROM examinations e
@@ -294,20 +423,28 @@ def get_examinations():
         """
         cursor.execute(query)
         exams = cursor.fetchall()
-        
+
+        # 🔥 FIX: Convert timedelta to string
+        for exam in exams:
+            if exam.get('start_time'):
+                exam['start_time'] = str(exam['start_time'])
+            if exam.get('end_time'):
+                exam['end_time'] = str(exam['end_time'])
+
         cursor.close()
         conn.close()
-        
+
         return jsonify({
             'success': True,
             'data': exams
         })
-        
+
     except Exception as e:
         return jsonify({
             'success': False,
             'message': str(e)
         }), 500
+
 
 @app.route('/api/examinations', methods=['POST'])
 def add_examination():
@@ -422,37 +559,37 @@ def get_alumni():
         }), 500
 
 # ==================== ADMIN ====================
-@app.route('/api/admin/login', methods=['POST'])
-def admin_login():
-    try:
-        data = request.json
-        conn = get_db_connection()
-        cursor = conn.cursor()
+# @app.route('/api/admin/login', methods=['POST'])
+# def admin_login():
+#     try:
+#         data = request.json
+#         conn = get_db_connection()
+#         cursor = conn.cursor()
         
-        query = "SELECT * FROM admin WHERE username = %s AND password = %s"
-        cursor.execute(query, (data['username'], data['password']))
-        admin = cursor.fetchone()
+#         query = "SELECT * FROM admin WHERE username = %s AND password = %s"
+#         cursor.execute(query, (data['username'], data['password']))
+#         admin = cursor.fetchone()
         
-        cursor.close()
-        conn.close()
+#         cursor.close()
+#         conn.close()
         
-        if admin:
-            return jsonify({
-                'success': True,
-                'message': 'Login successful',
-                'admin_id': admin['admin_id']
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Invalid credentials'
-            }), 401
+#         if admin:
+#             return jsonify({
+#                 'success': True,
+#                 'message': 'Login successful',
+#                 'admin_id': admin['admin_id']
+#             })
+#         else:
+#             return jsonify({
+#                 'success': False,
+#                 'message': 'Invalid credentials'
+#             }), 401
             
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+#     except Exception as e:
+#         return jsonify({
+#             'success': False,
+#             'message': str(e)
+#         }), 500
 
 # ==================== DEPARTMENTS (Helper) ====================
 @app.route('/api/departments', methods=['GET'])

@@ -177,5 +177,22 @@ INSERT INTO alumni (name, roll_number, dept_id, graduation_year, current_company
 ('Ravi Verma', 'ME2019001', 3, 2023, 'Tata Motors', 'Design Engineer', 'ravi.verma@gmail.com', '9988776657');
 
 -- Admin (password is 'admin123' - in production, use hashed passwords)
+
+-- Add teacher table
+CREATE TABLE IF NOT EXISTS teachers (
+    teacher_id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100),
+    dept_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (dept_id) REFERENCES departments(dept_id)
+);
+
+-- Insert sample teacher (password: teacher123)
+INSERT INTO teachers (username, password, name, email, dept_id) VALUES
+('teacher1', 'teacher123', 'Prof. Kumar', 'teacher1@college.edu', 1),
+('teacher2', 'teacher123', 'Prof. Sharma', 'teacher2@college.edu', 2);
 INSERT INTO admin (username, password, email) VALUES
 ('admin', 'admin123', 'admin@college.edu');

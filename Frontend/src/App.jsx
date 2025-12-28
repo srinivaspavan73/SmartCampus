@@ -427,7 +427,8 @@ function Placements({ isTeacher }) {
 }
 
 // ==================== JOB NOTIFICATIONS COMPONENT ====================
-function JobNotifications({ isAdmin }) {
+function JobNotifications({ isTeacher }) {
+
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -556,8 +557,7 @@ function JobNotifications({ isAdmin }) {
     <div>
       <h2>Job Notifications</h2>
       
-      {isAdmin && (
-        <div>
+      {isTeacher && (        <div>
           <button onClick={() => setShowForm(!showForm)}>
             {showForm ? 'Cancel' : 'Add New Job'}
           </button>
@@ -646,8 +646,7 @@ function JobNotifications({ isAdmin }) {
             <p><strong>Last Date:</strong> {job.last_date}</p>
             <p><strong>Posted:</strong> {new Date(job.posted_date).toLocaleDateString()}</p>
             
-            {isAdmin && (
-              <div>
+            {isTeacher && (              <div>
                 <button onClick={() => handleEdit(job)}>Edit</button>
                 <button onClick={() => handleDelete(job.job_id)}>Delete</button>
               </div>
@@ -660,10 +659,22 @@ function JobNotifications({ isAdmin }) {
 }
 
 // ==================== INTERNSHIPS COMPONENT ====================
-function Internships() {
+// ==================== INTERNSHIPS COMPONENT ====================
+function Internships({ isTeacher }) {
   const [internships, setInternships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    company_name: '',
+    position: '',
+    description: '',
+    duration: '',
+    stipend: '',
+    location: '',
+    last_date: ''
+  });
+  const [editingInternshipId, setEditingInternshipId] = useState(null);
 
   useEffect(() => {
     fetchInternships();
@@ -686,29 +697,205 @@ function Internships() {
     }
   };
 
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const url = editingInternshipId 
+        ? `${API_URL}/internships/${editingInternshipId}` 
+        : `${API_URL}/internships`;
+      const method = editingInternshipId ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(data.message);
+        setShowForm(false);
+        setEditingInternshipId(null);
+        setFormData({
+          company_name: '',
+          position: '',
+          description: '',
+          duration: '',
+          stipend: '',
+          location: '',
+          last_date: ''
+        });
+        fetchInternships();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (err) {
+      alert('Failed to submit internship');
+    }
+  };
+
+  const handleEdit = (internship) => {
+    setFormData({
+      company_name: internship.company_name,
+      position: internship.position,
+      description: internship.description || '',
+      duration: internship.duration || '',
+      stipend: internship.stipend || '',
+      location: internship.location || '',
+      last_date: internship.last_date || ''
+    });
+    setEditingInternshipId(internship.internship_id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (internshipId) => {
+    if (!window.confirm('Are you sure you want to delete this internship?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/internships/${internshipId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(data.message);
+        fetchInternships();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (err) {
+      alert('Failed to delete internship');
+    }
+  };
+
   if (loading) return <div>Loading internships...</div>;
   if (error) return <div style={{color: 'red'}}>{error}</div>;
 
   return (
     <div>
       <h2>Internship Opportunities</h2>
-      {internships.map((internship) => (
-        <div key={internship.internship_id} style={{marginBottom: '20px', border: '1px solid #ccc', padding: '10px'}}>
-          <h3>{internship.company_name} - {internship.position}</h3>
-          <p><strong>Description:</strong> {internship.description}</p>
-          <p><strong>Duration:</strong> {internship.duration}</p>
-          <p><strong>Stipend:</strong> ₹{internship.stipend}</p>
-          <p><strong>Location:</strong> {internship.location}</p>
-          <p><strong>Last Date:</strong> {internship.last_date}</p>
-          <p><strong>Posted:</strong> {new Date(internship.posted_date).toLocaleDateString()}</p>
+      
+      {isTeacher && (
+        <div>
+          <button onClick={() => setShowForm(!showForm)}>
+            {showForm ? 'Cancel' : 'Add New Internship'}
+          </button>
+
+          {showForm && (
+            <form onSubmit={handleSubmit} style={{marginTop: '20px', marginBottom: '20px'}}>
+              <h3>{editingInternshipId ? 'Edit Internship' : 'Add New Internship'}</h3>
+              <div>
+                <input
+                  type="text"
+                  name="company_name"
+                  placeholder="Company Name"
+                  value={formData.company_name}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  name="position"
+                  placeholder="Position"
+                  value={formData.position}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div>
+                <textarea
+                  name="description"
+                  placeholder="Description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows="3"
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  name="duration"
+                  placeholder="Duration (e.g., 2 months, 3 months)"
+                  value={formData.duration}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div>
+                <input
+                  type="number"
+                  name="stipend"
+                  placeholder="Stipend (INR)"
+                  value={formData.stipend}
+                  onChange={handleInputChange}
+                  step="0.01"
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  name="location"
+                  placeholder="Location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div>
+                <input
+                  type="date"
+                  name="last_date"
+                  value={formData.last_date}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <button type="submit">{editingInternshipId ? 'Update' : 'Add'} Internship</button>
+            </form>
+          )}
         </div>
-      ))}
+      )}
+
+      <div style={{marginTop: '30px'}}>
+        {internships.map((internship) => (
+          <div key={internship.internship_id} style={{marginBottom: '20px', border: '1px solid #ccc', padding: '10px'}}>
+            <h3>{internship.company_name} - {internship.position}</h3>
+            <p><strong>Description:</strong> {internship.description}</p>
+            <p><strong>Duration:</strong> {internship.duration}</p>
+            <p><strong>Stipend:</strong> ₹{internship.stipend}</p>
+            <p><strong>Location:</strong> {internship.location}</p>
+            <p><strong>Last Date:</strong> {internship.last_date}</p>
+            <p><strong>Posted:</strong> {new Date(internship.posted_date).toLocaleDateString()}</p>
+            
+            {isTeacher && (
+              <div>
+                <button onClick={() => handleEdit(internship)}>Edit</button>
+                <button onClick={() => handleDelete(internship.internship_id)}>Delete</button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 // ==================== EXAMINATIONS COMPONENT ====================
-function Examinations({ isAdmin }) {
+function Examinations({ isTeacher }) {
+
   const [exams, setExams] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -727,12 +914,13 @@ function Examinations({ isAdmin }) {
   });
   const [editingExamId, setEditingExamId] = useState(null);
 
-  useEffect(() => {
-    fetchExams();
-    if (isAdmin) {
-      fetchDepartments();
-    }
-  }, [isAdmin]);
+useEffect(() => {
+  fetchExams();
+  if (isTeacher) {
+    fetchDepartments();
+  }
+}, [isTeacher]);
+
 
   const fetchExams = async () => {
     try {
@@ -813,6 +1001,28 @@ function Examinations({ isAdmin }) {
       alert('Failed to submit examination');
     }
   };
+  const handleDelete = async (examId) => {
+  if (!window.confirm('Are you sure you want to delete this examination?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/examinations/${examId}`, {
+      method: 'DELETE'
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      alert(data.message);
+      fetchExams();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  } catch (err) {
+    alert('Failed to delete examination');
+  }
+};
 
   const handleEdit = (exam) => {
     setFormData({
@@ -837,8 +1047,7 @@ function Examinations({ isAdmin }) {
     <div>
       <h2>Examination Timetable</h2>
       
-      {isAdmin && (
-        <div>
+      {isTeacher && (        <div>
           <button onClick={() => setShowForm(!showForm)}>
             {showForm ? 'Cancel' : 'Add New Exam'}
           </button>
@@ -950,11 +1159,11 @@ function Examinations({ isAdmin }) {
             <p><strong>Time:</strong> {exam.start_time} - {exam.end_time}</p>
             <p><strong>Room:</strong> {exam.room_number}</p>
             
-            {isAdmin && (
-              <div>
-                <button onClick={() => handleEdit(exam)}>Edit</button>
-              </div>
-            )}
+{isTeacher && (  <div>
+    <button onClick={() => handleEdit(exam)}>Edit</button>
+    <button onClick={() => handleDelete(exam.exam_id)}>Delete</button>
+  </div>
+)}
           </div>
         ))}
       </div>
@@ -1011,64 +1220,64 @@ function Alumni() {
 }
 
 // ==================== ADMIN LOGIN COMPONENT ====================
-function AdminLogin({ onLogin }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+// function AdminLogin({ onLogin }) {
+//   const [username, setUsername] = useState('');
+//   const [password, setPassword] = useState('');
+//   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setError('');
 
-    try {
-      const response = await fetch(`${API_URL}/admin/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
-      });
+//     try {
+//       const response = await fetch(`${API_URL}/admin/login`, {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json'
+//         },
+//         body: JSON.stringify({ username, password })
+//       });
 
-      const data = await response.json();
+//       const data = await response.json();
 
-      if (data.success) {
-        onLogin(true);
-      } else {
-        setError(data.message);
-      }
-    } catch (err) {
-      setError('Login failed');
-    }
-  };
+//       if (data.success) {
+//         onLogin(true);
+//       } else {
+//         setError(data.message);
+//       }
+//     } catch (err) {
+//       setError('Login failed');
+//     }
+//   };
 
-  return (
-    <div>
-      <h2>Admin Login</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit">Login</button>
-      </form>
-      {error && <p style={{color: 'red'}}>{error}</p>}
-    </div>
-  );
-}
+//   return (
+//     <div>
+//       <h2>Admin Login</h2>
+//       <form onSubmit={handleSubmit}>
+//         <div>
+//           <input
+//             type="text"
+//             placeholder="Username"
+//             value={username}
+//             onChange={(e) => setUsername(e.target.value)}
+//             required
+//           />
+//         </div>
+//         <div>
+//           <input
+//             type="password"
+//             placeholder="Password"
+//             value={password}
+//             onChange={(e) => setPassword(e.target.value)}
+//             required
+//           />
+//         </div>
+//         <button type="submit">Login</button>
+//       </form>
+//       {error && <p style={{color: 'red'}}>{error}</p>}
+//     </div>
+//   );
+// }
 // ==================== TEACHER LOGIN COMPONENT ====================
 function TeacherLogin({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -1133,7 +1342,7 @@ function TeacherLogin({ onLogin }) {
 // ==================== MAIN APP COMPONENT ====================
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
-  const [isAdmin, setIsAdmin] = useState(false);
+  // const [isAdmin, setIsAdmin] = useState(false);
   const [isTeacher, setIsTeacher] = useState(false);
   const [teacherName, setTeacherName] = useState('');
 
@@ -1153,23 +1362,24 @@ function App() {
       case 'placements':
         return <Placements isTeacher={isTeacher} />;
       case 'jobs':
-        return <JobNotifications isAdmin={isAdmin || isTeacher} />;
-      case 'internships':
-        return <Internships />;
+        return <JobNotifications isTeacher={isTeacher} />;
+
+case 'internships':
+  return <Internships isTeacher={isTeacher} />;
       case 'examinations':
-        return <Examinations isAdmin={isAdmin || isTeacher} />;
+        return <Examinations isTeacher={ isTeacher} />;
       case 'alumni':
         return <Alumni />;
-      case 'admin':
-        return isAdmin ? (
-          <div>
-            <h2>Admin Panel</h2>
-            <p>You are logged in as admin.</p>
-            <button onClick={() => setIsAdmin(false)}>Logout</button>
-          </div>
-        ) : (
-          <AdminLogin onLogin={setIsAdmin} />
-        );
+      // case 'admin':
+      //   return isAdmin ? (
+      //     <div>
+      //       <h2>Admin Panel</h2>
+      //       <p>You are logged in as admin.</p>
+      //       <button onClick={() => setIsAdmin(false)}>Logout</button>
+      //     </div>
+      //   ) : (
+      //     <AdminLogin onLogin={setIsAdmin} />
+      //   );
       case 'teacher':
         return isTeacher ? (
           <div>
@@ -1200,9 +1410,9 @@ function App() {
         <button onClick={() => setCurrentPage('teacher')}>
           {isTeacher ? `Teacher (${teacherName})` : 'Teacher Login'}
         </button>
-        <button onClick={() => setCurrentPage('admin')}>
+        {/* <button onClick={() => setCurrentPage('admin')}>
           {isAdmin ? 'Admin Panel' : 'Admin Login'}
-        </button>
+        </button> */}
       </nav>
 
       <main>
